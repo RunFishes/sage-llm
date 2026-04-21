@@ -1,0 +1,26 @@
+{
+  "name": "sage-llm",
+  "version": "0.0.0",
+  "description": "Hand-written LLM provider library — OpenAI-compatible + Anthropic native, streaming, tool calling, zero runtime deps",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "rm -rf dist-test && tsc -p tsconfig.test.json && node --test dist-test/tests/*.test.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "zod": "^3.25.0 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.2",
+    "zod": "^3.25.0"
+  }
+}
