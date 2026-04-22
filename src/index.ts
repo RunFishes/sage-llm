@@ -19,4 +19,9 @@ export type {
 
 export { LLMError, LLMErrorType } from "./errors.ts";
 
+export type { LLMProvider, ProviderConfig } from "./providers/index.ts";
+
+export { parseSSE } from "./sse.ts";
+export type { SSEEvent } from "./sse.ts";
+
 export const VERSION = "0.0.0";
