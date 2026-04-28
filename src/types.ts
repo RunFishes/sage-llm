@@ -9,7 +9,7 @@
  *   response; we never invoke handlers ourselves.
  */
 
-import type { ZodType } from "zod";
+import type { ZodType } from "zod/v4";
 
 // ---------------------------------------------------------------------------
 // Messages

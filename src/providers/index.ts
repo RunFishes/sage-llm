@@ -1,2 +1,4 @@
-// Provider layer — interface only for now. Concrete providers come next.
 export type { LLMProvider, ProviderConfig } from "./types.ts";
+
+export { OpenAIProvider } from "./openai.ts";
+export type { OpenAIConfig } from "./openai.ts";

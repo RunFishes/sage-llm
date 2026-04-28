@@ -36,6 +36,29 @@ const RETRYABLE_TYPES: ReadonlySet<LLMErrorType> = new Set([
   LLMErrorType.UNKNOWN,
 ]);
 
+/**
+ * Error codes from OpenAI / Anthropic that signal "prompt too long".
+ * Add aliases here as we encounter them in real responses.
+ */
+const CONTEXT_LENGTH_CODES: ReadonlySet<string> = new Set([
+  "context_length_exceeded", // OpenAI
+  "string_above_max_length", // OpenAI (rare)
+  "tokens_exceeded_error", // some compatible providers
+]);
+
+/**
+ * Error codes that signal "content filtered by safety system".
+ */
+const CONTENT_FILTER_CODES: ReadonlySet<string> = new Set([
+  "content_filter", // OpenAI
+  "content_policy_violation", // OpenAI
+  "safety", // generic
+]);
+
+/** Fallback regex for messages that look like context-length errors. */
+const CONTEXT_LENGTH_PATTERN =
+  /context.{0,10}length|too long|maximum.{0,10}token|exceeds.{0,20}token/i;
+
 export class LLMError extends Error {
   readonly type: LLMErrorType;
   readonly retryable: boolean;
@@ -59,20 +82,70 @@ export class LLMError extends Error {
     this.retryable = RETRYABLE_TYPES.has(type);
   }
 
-  /** Classify an HTTP response status code into an LLMErrorType. */
-  static fromStatus(
+  /**
+   * Unified HTTP error classifier — used by all providers.
+   *
+   * Provider's job is just to extract `{ status, errorCode?, message }` from
+   * its own error body shape. This function maps that to an `LLMErrorType`.
+   *
+   * Classification:
+   * 1. Status code (coarse): 401/403 → AUTH, 429 → RATE_LIMIT, 5xx → SERVER
+   * 2. errorCode (fine, for 4xx): see code sets below
+   * 3. Message regex (fallback): matches "context length"-ish phrases
+   */
+  static fromHTTPError(
     status: number,
+    errorCode: string | undefined,
     message: string,
     raw?: unknown
   ): LLMError {
-    let type: LLMErrorType;
-    if (status === 401 || status === 403) type = LLMErrorType.AUTH;
-    else if (status === 429) type = LLMErrorType.RATE_LIMIT;
-    else if (status >= 500) type = LLMErrorType.SERVER;
-    else if (status === 400 && /context|length|token/i.test(message))
-      type = LLMErrorType.CONTEXT_LENGTH;
-    else type = LLMErrorType.UNKNOWN;
-    return new LLMError(type, message, { statusCode: status, raw });
+    // Coarse classification by status code.
+    if (status === 401 || status === 403) {
+      return new LLMError(LLMErrorType.AUTH, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+    if (status === 429) {
+      return new LLMError(LLMErrorType.RATE_LIMIT, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+    if (status >= 500) {
+      return new LLMError(LLMErrorType.SERVER, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+
+    // Fine classification by error code (covers OpenAI `code` and Anthropic `type`).
+    const code = errorCode?.toLowerCase();
+    if (code && CONTEXT_LENGTH_CODES.has(code)) {
+      return new LLMError(LLMErrorType.CONTEXT_LENGTH, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+    if (code && CONTENT_FILTER_CODES.has(code)) {
+      return new LLMError(LLMErrorType.CONTENT_FILTER, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+
+    // Fallback: pattern-match the message for context-length signals.
+    if (CONTEXT_LENGTH_PATTERN.test(message)) {
+      return new LLMError(LLMErrorType.CONTEXT_LENGTH, message, {
+        statusCode: status,
+        raw,
+      });
+    }
+
+    return new LLMError(LLMErrorType.UNKNOWN, message, {
+      statusCode: status,
+      raw,
+    });
   }
 
   /** Wrap a thrown fetch error. */

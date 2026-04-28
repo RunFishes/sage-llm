@@ -20,6 +20,8 @@ export type {
 export { LLMError, LLMErrorType } from "./errors.ts";
 
 export type { LLMProvider, ProviderConfig } from "./providers/index.ts";
+export { OpenAIProvider } from "./providers/index.ts";
+export type { OpenAIConfig } from "./providers/index.ts";
 
 export { parseSSE } from "./sse.ts";
 export type { SSEEvent } from "./sse.ts";
