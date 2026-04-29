@@ -170,6 +170,8 @@ test("abort signal stops iteration", async () => {
   } catch (err: unknown) {
     threw = true;
     assert.equal((err as Error).name, "LLMError");
+    // Must be classified as ABORTED (not NETWORK/UNKNOWN), so retry layer skips it.
+    assert.equal((err as { type: string }).type, "aborted");
   }
   assert.equal(threw, true);
   assert.equal(events.length, 1);

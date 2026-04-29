@@ -322,7 +322,9 @@ export function extractOpenAIError(
     | { error?: { code?: string; type?: string; message?: string } }
     | undefined;
   return {
-    code: b?.error?.code ?? b?.error?.type,
-    message: b?.error?.message ?? fallbackMessage,
+    // Use `||` so empty-string code falls back to type (OpenAI-compat servers
+    // sometimes send `code: ""`).
+    code: b?.error?.code || b?.error?.type,
+    message: b?.error?.message || fallbackMessage,
   };
 }
